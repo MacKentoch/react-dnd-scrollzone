@@ -1,6 +1,6 @@
 import React, { Component, createContext } from 'react';
 // import { Consumer as DragDropContextConsumer } from 'react-dnd/lib/DragDropContext';
-import { DragDropContext } from 'react-dnd';
+import { DndContext } from 'react-dnd';
 import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import throttle from 'lodash.throttle';
@@ -10,7 +10,7 @@ import hoist from 'hoist-non-react-statics';
 import { noop, intBetween, getCoords } from './util';
 
 const DEFAULT_BUFFER = 150;
-const DragDropContextConsumer = DragDropContext.Consumer;
+const DragDropContextConsumer = DndContext.Consumer;
 const useNewContextApi =
   createContext !== undefined && DragDropContextConsumer !== undefined;
 
