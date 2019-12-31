@@ -1,5 +1,6 @@
 import React, { Component, createContext } from 'react';
-import { Consumer as DragDropContextConsumer } from 'react-dnd/lib/DragDropContext';
+// import { Consumer as DragDropContextConsumer } from 'react-dnd/lib/DragDropContext';
+import { DragDropContext } from 'react-dnd';
 import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import throttle from 'lodash.throttle';
@@ -9,16 +10,17 @@ import hoist from 'hoist-non-react-statics';
 import { noop, intBetween, getCoords } from './util';
 
 const DEFAULT_BUFFER = 150;
-
-const useNewContextApi = createContext !== undefined && DragDropContextConsumer !== undefined;
+const DragDropContextConsumer = DragDropContext.Consumer;
+const useNewContextApi =
+  createContext !== undefined && DragDropContextConsumer !== undefined;
 
 function createDragDropMonitorWrapper(WrappedComponent) {
   return function DragDropMonitorWrapper(props) {
     return (
       <DragDropContextConsumer>
-        {({ dragDropManager }) =>
+        {({ dragDropManager }) => (
           <WrappedComponent {...props} dragDropManager={dragDropManager} />
-        }
+        )}
       </DragDropContextConsumer>
     );
   };
@@ -33,7 +35,7 @@ export function createHorizontalStrength(_buffer) {
     if (inBox) {
       if (point.x < x + buffer) {
         return (point.x - x - buffer) / buffer;
-      } else if (point.x > (x + w - buffer)) {
+      } else if (point.x > x + w - buffer) {
         return -(x + w - point.x - buffer) / buffer;
       }
     }
@@ -51,7 +53,7 @@ export function createVerticalStrength(_buffer) {
     if (inBox) {
       if (point.y < y + buffer) {
         return (point.y - y - buffer) / buffer;
-      } else if (point.y > (y + h - buffer)) {
+      } else if (point.y > y + h - buffer) {
         return -(y + h - point.y - buffer) / buffer;
       }
     }
@@ -60,14 +62,14 @@ export function createVerticalStrength(_buffer) {
   };
 }
 
-export const defaultHorizontalStrength = createHorizontalStrength(DEFAULT_BUFFER);
+export const defaultHorizontalStrength = createHorizontalStrength(
+  DEFAULT_BUFFER
+);
 
 export const defaultVerticalStrength = createVerticalStrength(DEFAULT_BUFFER);
 
-
 export default function createScrollingComponent(WrappedComponent) {
   class ScrollingComponent extends Component {
-
     static displayName = `Scrolling(${getDisplayName(WrappedComponent)})`;
 
     static propTypes = {
@@ -75,21 +77,21 @@ export default function createScrollingComponent(WrappedComponent) {
       verticalStrength: PropTypes.func,
       horizontalStrength: PropTypes.func,
       strengthMultiplier: PropTypes.number,
-      getScrollContainer: PropTypes.func,
+      getScrollContainer: PropTypes.func
     };
 
     static defaultProps = {
       onScrollChange: noop,
       verticalStrength: defaultVerticalStrength,
       horizontalStrength: defaultHorizontalStrength,
-      strengthMultiplier: 30,
+      strengthMultiplier: 30
     };
 
     static contextTypes = useNewContextApi
       ? undefined
       : {
-        dragDropManager: PropTypes.object,
-      };
+          dragDropManager: PropTypes.object
+        };
 
     constructor(props, ctx) {
       super(props, ctx);
@@ -105,15 +107,17 @@ export default function createScrollingComponent(WrappedComponent) {
     componentDidMount() {
       const { getScrollContainer } = this.props;
       const wrappedNode = findDOMNode(this.wrappedInstance);
-      this.container = getScrollContainer ? getScrollContainer(wrappedNode) : wrappedNode;
+      this.container = getScrollContainer
+        ? getScrollContainer(wrappedNode)
+        : wrappedNode;
       this.container.addEventListener('dragover', this.handleEvent);
       // touchmove events don't seem to work across siblings, so we unfortunately
       // have to attach the listeners to the body
       window.document.body.addEventListener('touchmove', this.handleEvent);
 
       this.clearMonitorSubscription = this.getDragDropManager()
-          .getMonitor()
-          .subscribeToStateChange(() => this.handleMonitorChange());
+        .getMonitor()
+        .subscribeToStateChange(() => this.handleMonitorChange());
     }
 
     componentWillUnmount() {
@@ -129,15 +133,17 @@ export default function createScrollingComponent(WrappedComponent) {
         : this.context.dragDropManager;
     }
 
-    handleEvent = (evt) => {
+    handleEvent = evt => {
       if (this.dragging && !this.attached) {
         this.attach();
         this.updateScrolling(evt);
       }
-    }
+    };
 
     handleMonitorChange() {
-      const isDragging = this.getDragDropManager().getMonitor().isDragging();
+      const isDragging = this.getDragDropManager()
+        .getMonitor()
+        .isDragging();
 
       if (!this.dragging && isDragging) {
         this.dragging = true;
@@ -155,26 +161,41 @@ export default function createScrollingComponent(WrappedComponent) {
 
     detach() {
       this.attached = false;
-      window.document.body.removeEventListener('dragover', this.updateScrolling);
-      window.document.body.removeEventListener('touchmove', this.updateScrolling);
+      window.document.body.removeEventListener(
+        'dragover',
+        this.updateScrolling
+      );
+      window.document.body.removeEventListener(
+        'touchmove',
+        this.updateScrolling
+      );
     }
 
     // Update scaleX and scaleY every 100ms or so
     // and start scrolling if necessary
-    updateScrolling = throttle(evt => {
-      const { left: x, top: y, width: w, height: h } = this.container.getBoundingClientRect();
-      const box = { x, y, w, h };
-      const coords = getCoords(evt);
+    updateScrolling = throttle(
+      evt => {
+        const {
+          left: x,
+          top: y,
+          width: w,
+          height: h
+        } = this.container.getBoundingClientRect();
+        const box = { x, y, w, h };
+        const coords = getCoords(evt);
 
-      // calculate strength
-      this.scaleX = this.props.horizontalStrength(box, coords);
-      this.scaleY = this.props.verticalStrength(box, coords);
+        // calculate strength
+        this.scaleX = this.props.horizontalStrength(box, coords);
+        this.scaleY = this.props.verticalStrength(box, coords);
 
-      // start scrolling if we need to
-      if (!this.frame && (this.scaleX || this.scaleY)) {
-        this.startScrolling();
-      }
-    }, 100, { trailing: false })
+        // start scrolling if we need to
+        if (!this.frame && (this.scaleX || this.scaleY)) {
+          this.startScrolling();
+        }
+      },
+      100,
+      { trailing: false }
+    );
 
     startScrolling() {
       let i = 0;
@@ -199,23 +220,23 @@ export default function createScrollingComponent(WrappedComponent) {
             scrollWidth,
             scrollHeight,
             clientWidth,
-            clientHeight,
+            clientHeight
           } = container;
 
           const newLeft = scaleX
-            ? container.scrollLeft = intBetween(
-              0,
-              scrollWidth - clientWidth,
-              scrollLeft + scaleX * strengthMultiplier
-            )
+            ? (container.scrollLeft = intBetween(
+                0,
+                scrollWidth - clientWidth,
+                scrollLeft + scaleX * strengthMultiplier
+              ))
             : scrollLeft;
 
           const newTop = scaleY
-            ? container.scrollTop = intBetween(
-              0,
-              scrollHeight - clientHeight,
-              scrollTop + scaleY * strengthMultiplier
-            )
+            ? (container.scrollTop = intBetween(
+                0,
+                scrollHeight - clientHeight,
+                scrollTop + scaleY * strengthMultiplier
+              ))
             : scrollTop;
 
           onScrollChange(newLeft, newTop);
@@ -245,12 +266,14 @@ export default function createScrollingComponent(WrappedComponent) {
         horizontalStrength,
         onScrollChange,
 
-        ...props,
+        ...props
       } = this.props;
 
       return (
         <WrappedComponent
-          ref={(ref) => { this.wrappedInstance = ref; }}
+          ref={ref => {
+            this.wrappedInstance = ref;
+          }}
           {...props}
         />
       );
@@ -258,7 +281,9 @@ export default function createScrollingComponent(WrappedComponent) {
   }
 
   if (useNewContextApi) {
-    const DragDropMonitorWrapper = createDragDropMonitorWrapper(ScrollingComponent);
+    const DragDropMonitorWrapper = createDragDropMonitorWrapper(
+      ScrollingComponent
+    );
     return hoist(DragDropMonitorWrapper, WrappedComponent);
   }
 
